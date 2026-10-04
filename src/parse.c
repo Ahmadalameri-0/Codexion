@@ -6,7 +6,7 @@
 /*   By: abani-am <abani-am@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/21 11:53:49 by abani-am          #+#    #+#             */
-/*   Updated: 2026/09/21 11:58:59 by abani-am         ###   ########.fr       */
+/*   Updated: 2026/09/24 18:15:16 by abani-am         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -54,7 +54,7 @@ static int	check_values(t_data *data)
 		|| data->nb_compiles_required <= 0
 		|| data->dongle_cooldown < 0)
 	{
-		printf("[Error 2] Invalid numeric value provided.\n");
+		printf("[Error] Invalid numeric value provided.\n");
 		return (2);
 	}
 	return (0);
@@ -68,7 +68,8 @@ static int	set_scheduler(char *arg, t_data *data)
 		data->scheduler = 1;
 	else
 	{
-		printf("[Error 3] Scheduler '%s' is invalid.\n", arg);
+		printf("[Error] Invalid '%s' scheduler. "
+			"It should be 'edf' or 'fifo'\n", arg);
 		return (3);
 	}
 	return (0);
@@ -81,7 +82,7 @@ int	parse_args(int argc, char **argv, t_data *data)
 	if (argc != 9)
 	{
 		printf(
-			"[Error 1] Expected 8 arguments, "
+			"[Error] Expected 8 arguments, "
 			"but received %d.\n", argc - 1);
 		return (1);
 	}

@@ -6,7 +6,7 @@
 /*   By: abani-am <abani-am@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/21 11:54:02 by abani-am          #+#    #+#             */
-/*   Updated: 2026/09/22 16:31:28 by abani-am         ###   ########.fr       */
+/*   Updated: 2026/10/04 12:30:44 by abani-am         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,12 +37,12 @@ void	ft_usleep(long long time_in_ms, t_data *data)
 	while ((get_current_time() - start_time) < time_in_ms)
 	{
 		pthread_mutex_lock(&data->state_mutex);
-		if(data->simulation_stop == 1)
+		if (data->simulation_stop == 1)
 		{
 			pthread_mutex_unlock(&data->state_mutex);
-			break;
+			break ;
 		}
-		pthread_mutex_unlock(&data->simulation_stop);
+		pthread_mutex_unlock(&data->state_mutex);
 		usleep(500);
 	}
 }

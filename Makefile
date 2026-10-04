@@ -4,15 +4,14 @@ CC = cc
 CFLAGS = -Wall -Wextra -Werror -pthread -I.
 RM = rm -rf
 
-SRCS = main.c \
-		Codexion.h \
+SRCS =  main.c\
 		src/utils.c \
 		src/monitor.c \
 		src/parse.c \
 		src/init.c \
 		src/routine.c \
-		
-		
+		src/scheduler.c \
+
 
 OBJS = $(SRCS:.c=.o)
 
@@ -21,7 +20,7 @@ all: $(NAME)
 $(NAME): $(OBJS)
 	$(CC) $(CFLAGS) $(OBJS) -o $(NAME)
 
-%.o: %.c Codexion.h
+%.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
