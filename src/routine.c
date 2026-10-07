@@ -30,16 +30,29 @@ void	print_action(t_coder *coder, char *action)
 	pthread_mutex_unlock(&coder->data->write_mutex);
 }
 
+static int	is_stopped(t_coder *coder)
+{
+	int stop;
+
+	pthread_mutex_lock(&coder->data->state_mutex);
+	stop = coder->data->simulation_stop;
+	pthread_mutex_unlock(&coder->data->state_mutex);
+	return (stop);
+}
+
 static void	take_one(t_dongle *dongle, t_coder *coder, t_request req)
 {
 	long long	rem;
 
 	pthread_mutex_lock(&dongle->lock);
 	scheduler_push(&dongle->queue, req);
-	while (1)
+	while (!is_stopped(coder))
 	{
-		while (dongle->taken || dongle->queue.items[0].coder_id != coder->id)
+		while (!is_stopped(coder) && (dongle->taken
+				|| dongle->queue.items[0].coder_id != coder->id))
 			pthread_cond_wait(&dongle->cond, &dongle->lock);
+		if (is_stopped(coder))
+			break ;
 		rem = dongle->last_used_time + coder->data->dongle_cooldown
 			- get_current_time();
 		if (rem <= 0)
@@ -48,10 +61,14 @@ static void	take_one(t_dongle *dongle, t_coder *coder, t_request req)
 		ft_usleep(rem, coder->data);
 		pthread_mutex_lock(&dongle->lock);
 	}
-	scheduler_pop(&dongle->queue);
-	dongle->taken = 1;
+	if (!is_stopped(coder))
+	{
+		scheduler_pop(&dongle->queue);
+		dongle->taken = 1;
+	}
 	pthread_mutex_unlock(&dongle->lock);
-	print_action(coder, "has taken a dongle");
+	if (!is_stopped(coder))
+		print_action(coder, "has taken a dongle");
 }
 
 static void	acquire_dongles(t_coder *coder)
@@ -61,14 +78,11 @@ static void	acquire_dongles(t_coder *coder)
 	req.coder_id = coder->id;
 	pthread_mutex_lock(&coder->data->state_mutex);
 	req.seq = coder->data->fifo_counter++;
-	req.key = coder->last_compile_time + coder->data->time_to_burnout;
-	if (coder->data->scheduler == 0)
+	if (coder->data->scheduler == FIFO)
 		req.key = req.seq;
-	else if (coder->data->scheduler == 2)
-		req.key = -req.seq;
+	else
+		req.key = coder->last_compile_time + coder->data->time_to_burnout;
 	pthread_mutex_unlock(&coder->data->state_mutex);
-	if (coder->data->scheduler == 2)
-		print_action(coder, "got a negative key (PROOF LIFO)");
 	if (coder->left_dongle->id < coder->right_dongle->id)
 		take_one(coder->left_dongle, coder, req);
 	else
@@ -109,19 +123,15 @@ static void	work_routine(t_coder *coder)
 void	*coder_routine(void *arg)
 {
 	t_coder	*coder;
-	int		stop;
 
 	coder = (t_coder *)arg;
 	if (coder->id % 2 == 0)
 		ft_usleep(10, coder->data);
-	while (1)
+	while (!is_stopped(coder))
 	{
-		pthread_mutex_lock(&coder->data->state_mutex);
-		stop = coder->data->simulation_stop;
-		pthread_mutex_unlock(&coder->data->state_mutex);
-		if (stop == 1)
-			break ;
 		acquire_dongles(coder);
+		if (is_stopped(coder))
+			break ;
 		if (coder->data->nb_coders == 1)
 		{
 			ft_usleep(coder->data->time_to_burnout, coder->data);

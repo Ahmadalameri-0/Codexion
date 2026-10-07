@@ -12,6 +12,23 @@
 
 #include "Codexion.h"
 
+void	stop_simulation(t_data *data)
+{
+	int i;
+
+	pthread_mutex_lock(&data->state_mutex);
+	data->simulation_stop = 1;
+	pthread_mutex_unlock(&data->state_mutex);
+	i = 0;
+	while (i < data->nb_coders)
+	{
+		pthread_mutex_lock(&data->dongle[i].lock);
+		pthread_cond_broadcast(&data->dongle[i].cond);
+		pthread_mutex_unlock(&data->dongle[i].lock);
+		i++;
+	}
+}
+
 static int	check_death(t_data *data)
 {
 	int			i;
@@ -22,17 +39,16 @@ static int	check_death(t_data *data)
 	{
 		pthread_mutex_lock(&data->state_mutex);
 		elapsed = get_current_time() - data->coders[i].last_compile_time;
+		pthread_mutex_unlock(&data->state_mutex);
 		if (elapsed >= data->time_to_burnout)
 		{
-			data->simulation_stop = 1;
-			pthread_mutex_unlock(&data->state_mutex);
 			pthread_mutex_lock(&data->write_mutex);
-			printf("Milliseconds: %3lld | Coder ID: %d burned out\n",
-				get_time_elapsed(data->start_time), data->coders[i].id);
+			printf("Time: %3lldms | Coder ID: %d burned out\n",
+				   get_time_elapsed(data->start_time), data->coders[i].id);
 			pthread_mutex_unlock(&data->write_mutex);
+			stop_simulation(data);
 			return (1);
 		}
-		pthread_mutex_unlock(&data->state_mutex);
 		i++;
 	}
 	return (0);
@@ -55,9 +71,7 @@ static int	check_completion(t_data *data)
 	}
 	if (finished == data->nb_coders)
 	{
-		pthread_mutex_lock(&data->state_mutex);
-		data->simulation_stop = 1;
-		pthread_mutex_unlock(&data->state_mutex);
+		stop_simulation(data);
 		return (1);
 	}
 	return (0);

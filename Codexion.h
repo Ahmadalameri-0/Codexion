@@ -82,6 +82,8 @@ void		ft_usleep(long long time_in_ms, t_data *data);
 int			parse_args(int argc, char **argv, t_data *data);
 int			init_simulation(t_data *data);
 void		*coder_routine(void *arg);
+void		monitor_routine(t_data *data);
+void		stop_simulation(t_data *data);
 t_request	scheduler_pop(t_heap *heap);
 void		scheduler_push(t_heap *heap, t_request req);
 
