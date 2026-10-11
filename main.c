@@ -3,10 +3,22 @@
 /*                                                        :::      ::::::::   */
 /*   main.c                                             :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: abani-am <abani-am@learner.42.tech>        +#+  +:+       +#+        */
+/*   By: abani-am <abani-am@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/03 09:12:52 by abani-am          #+#    #+#             */
-/*   Updated: 2026/10/03 09:12:53 by abani-am         ###   ########.fr       */
+/*   Updated: 2026/10/10 12:35:33 by abani-am         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   main.c                                             :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: abani-am <abani-am@student.42.fr>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/09/24 18:02:36 by abani-am          #+#    #+#             */
+/*   Updated: 2026/10/04 12:49:13 by abani-am         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,13 +31,13 @@ static void	clean_simulation(t_data *data)
 	i = 0;
 	while (i < data->nb_coders)
 	{
-		pthread_mutex_destroy(&data->dongle[i].lock);
-		pthread_cond_destroy(&data->dongle[i].cond);
 		free(data->dongle[i].queue.items);
 		i++;
 	}
 	pthread_mutex_destroy(&data->write_mutex);
 	pthread_mutex_destroy(&data->state_mutex);
+	pthread_mutex_destroy(&data->table_lock);
+	pthread_cond_destroy(&data->table_cond);
 	free(data->dongle);
 	free(data->coders);
 }
@@ -49,9 +61,7 @@ int	main(int argc, char **argv)
 	monitor_routine(&data);
 	i = -1;
 	while (++i < data.nb_coders)
-	{
-		pthread_join(data.coders[i].thread, NULL);	
-	}
+		pthread_join(data.coders[i].thread, NULL);
 	clean_simulation(&data);
 	return (0);
 }

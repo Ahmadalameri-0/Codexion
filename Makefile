@@ -11,6 +11,7 @@ SRCS =  main.c\
 		src/init.c \
 		src/routine.c \
 		src/scheduler.c \
+		src/dongle.c \
 
 
 OBJS = $(SRCS:.c=.o)

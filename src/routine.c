@@ -6,7 +6,7 @@
 /*   By: abani-am <abani-am@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/24 18:02:36 by abani-am          #+#    #+#             */
-/*   Updated: 2026/10/04 12:49:13 by abani-am         ###   ########.fr       */
+/*   Updated: 2026/10/11 08:47:35 by abani-am         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,64 +14,32 @@
 
 void	print_action(t_coder *coder, char *action)
 {
-	long long	time_now;
-
-	pthread_mutex_lock(&coder->data->state_mutex);
-	if (coder->data->simulation_stop == 1)
-	{
-		pthread_mutex_unlock(&coder->data->state_mutex);
+	if (is_stopped(coder))
 		return ;
-	}
-	pthread_mutex_unlock(&coder->data->state_mutex);
 	pthread_mutex_lock(&coder->data->write_mutex);
-	time_now = get_time_elapsed(coder->data->start_time);
 	printf("Milliseconds: %3lldms | Coder ID: %d %s\n",
-		time_now, coder->id, action);
+		get_time_elapsed(coder->data->start_time), coder->id, action);
 	pthread_mutex_unlock(&coder->data->write_mutex);
 }
 
-static int	is_stopped(t_coder *coder)
+static long long	start_slot(t_coder *coder)
 {
-	int stop;
+	t_data		*data;
+	long long	slot;
+	long long	pos;
 
-	pthread_mutex_lock(&coder->data->state_mutex);
-	stop = coder->data->simulation_stop;
-	pthread_mutex_unlock(&coder->data->state_mutex);
-	return (stop);
+	data = coder->data;
+	if (data->scheduler != EDF || data->nb_coders < 2)
+		return (0);
+	slot = data->time_to_compile + data->dongle_cooldown;
+	if (data->nb_coders % 2 == 0)
+		return (((coder->id - 1) % 2) * slot);
+	pos = ((data->nb_coders - coder->id) * ((data->nb_coders + 1) / 2))
+		% data->nb_coders;
+	return (pos * slot / (data->nb_coders / 2));
 }
 
-static void	take_one(t_dongle *dongle, t_coder *coder, t_request req)
-{
-	long long	rem;
-
-	pthread_mutex_lock(&dongle->lock);
-	scheduler_push(&dongle->queue, req);
-	while (!is_stopped(coder))
-	{
-		while (!is_stopped(coder) && (dongle->taken
-				|| dongle->queue.items[0].coder_id != coder->id))
-			pthread_cond_wait(&dongle->cond, &dongle->lock);
-		if (is_stopped(coder))
-			break ;
-		rem = dongle->last_used_time + coder->data->dongle_cooldown
-			- get_current_time();
-		if (rem <= 0)
-			break ;
-		pthread_mutex_unlock(&dongle->lock);
-		ft_usleep(rem, coder->data);
-		pthread_mutex_lock(&dongle->lock);
-	}
-	if (!is_stopped(coder))
-	{
-		scheduler_pop(&dongle->queue);
-		dongle->taken = 1;
-	}
-	pthread_mutex_unlock(&dongle->lock);
-	if (!is_stopped(coder))
-		print_action(coder, "has taken a dongle");
-}
-
-static void	acquire_dongles(t_coder *coder)
+static int	acquire_dongles(t_coder *coder)
 {
 	t_request	req;
 
@@ -81,19 +49,19 @@ static void	acquire_dongles(t_coder *coder)
 	if (coder->data->scheduler == FIFO)
 		req.key = req.seq;
 	else
-		req.key = coder->last_compile_time + coder->data->time_to_burnout;
-	pthread_mutex_unlock(&coder->data->state_mutex);
-	if (coder->left_dongle->id < coder->right_dongle->id)
-		take_one(coder->left_dongle, coder, req);
-	else
-		take_one(coder->right_dongle, coder, req);
-	if (coder->data->nb_coders > 1)
 	{
-		if (coder->left_dongle->id < coder->right_dongle->id)
-			take_one(coder->right_dongle, coder, req);
-		else
-			take_one(coder->left_dongle, coder, req);
+		req.key = coder->last_compile_time + coder->data->time_to_burnout;
+		req.seq += (coder->compiles_count + 1) * 1000000000LL;
+		if (coder->compiles_count == 0)
+			req.seq = start_slot(coder);
 	}
+	pthread_mutex_unlock(&coder->data->state_mutex);
+	if (!take_dongles(coder, req))
+		return (0);
+	print_action(coder, "has taken a dongle");
+	if (coder->left_dongle != coder->right_dongle)
+		print_action(coder, "has taken a dongle");
+	return (1);
 }
 
 static void	work_routine(t_coder *coder)
@@ -104,16 +72,7 @@ static void	work_routine(t_coder *coder)
 	coder->compiles_count++;
 	pthread_mutex_unlock(&coder->data->state_mutex);
 	ft_usleep(coder->data->time_to_compile, coder->data);
-	pthread_mutex_lock(&coder->left_dongle->lock);
-	coder->left_dongle->last_used_time = get_current_time();
-	coder->left_dongle->taken = 0;
-	pthread_cond_broadcast(&coder->left_dongle->cond);
-	pthread_mutex_unlock(&coder->left_dongle->lock);
-	pthread_mutex_lock(&coder->right_dongle->lock);
-	coder->right_dongle->last_used_time = get_current_time();
-	coder->right_dongle->taken = 0;
-	pthread_cond_broadcast(&coder->right_dongle->cond);
-	pthread_mutex_unlock(&coder->right_dongle->lock);
+	release_dongles(coder);
 	print_action(coder, "is debugging");
 	ft_usleep(coder->data->time_to_debug, coder->data);
 	print_action(coder, "is refactoring");
@@ -125,14 +84,12 @@ void	*coder_routine(void *arg)
 	t_coder	*coder;
 
 	coder = (t_coder *)arg;
-	if (coder->id % 2 == 0)
-		ft_usleep(10, coder->data);
+	coder->start_at = coder->data->start_time + start_slot(coder);
 	while (!is_stopped(coder))
 	{
-		acquire_dongles(coder);
-		if (is_stopped(coder))
+		if (!acquire_dongles(coder))
 			break ;
-		if (coder->data->nb_coders == 1)
+		if (coder->left_dongle == coder->right_dongle)
 		{
 			ft_usleep(coder->data->time_to_burnout, coder->data);
 			break ;

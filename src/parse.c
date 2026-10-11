@@ -6,7 +6,7 @@
 /*   By: abani-am <abani-am@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/21 11:53:49 by abani-am          #+#    #+#             */
-/*   Updated: 2026/09/24 18:15:16 by abani-am         ###   ########.fr       */
+/*   Updated: 2026/10/10 12:37:10 by abani-am         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,7 +22,6 @@ static int	ft_strcmp(const char *str1, const char *str2)
 	return (*(unsigned char *)str1 - *(unsigned char *)str2);
 }
 
-// Converts a string to a number, returns -1 on error
 static long long	ft_atol(const char *str)
 {
 	long long	res;
@@ -46,12 +45,9 @@ static long long	ft_atol(const char *str)
 
 static int	check_values(t_data *data)
 {
-	if (data->nb_coders <= 0
-		|| data->time_to_burnout <= 0
-		|| data->time_to_compile <= 0
-		|| data->time_to_debug <= 0
-		|| data->time_to_refactor <= 0
-		|| data->nb_compiles_required <= 0
+	if (data->nb_coders <= 0 || data->time_to_burnout <= 0
+		|| data->time_to_compile <= 0 || data->time_to_debug <= 0
+		|| data->time_to_refactor <= 0 || data->nb_compiles_required <= 0
 		|| data->dongle_cooldown < 0)
 	{
 		printf("[Error] Invalid numeric value provided.\n");
@@ -62,14 +58,13 @@ static int	check_values(t_data *data)
 
 static int	set_scheduler(char *arg, t_data *data)
 {
-	if (ft_strcmp(arg, "fifo") == 0 || ft_strcmp(arg, "FIFO") == 0)
-		data->scheduler = 0;
-	else if (ft_strcmp(arg, "edf") == 0 || ft_strcmp(arg, "EDF") == 0)
-		data->scheduler = 1;
+	if (ft_strcmp(arg, "fifo") == 0)
+		data->scheduler = FIFO;
+	else if (ft_strcmp(arg, "edf") == 0)
+		data->scheduler = EDF;
 	else
 	{
-		printf("[Error] Invalid '%s' scheduler. "
-			"It should be 'edf' or 'fifo'\n", arg);
+		printf("[Error] Scheduler must be 'edf' or 'fifo'\n");
 		return (3);
 	}
 	return (0);
@@ -77,13 +72,11 @@ static int	set_scheduler(char *arg, t_data *data)
 
 int	parse_args(int argc, char **argv, t_data *data)
 {
-	int		status;
+	int	status;
 
 	if (argc != 9)
 	{
-		printf(
-			"[Error] Expected 8 arguments, "
-			"but received %d.\n", argc - 1);
+		printf("[Error] Expected 8 arguments, but received %d.\n", argc - 1);
 		return (1);
 	}
 	data->nb_coders = ft_atol(argv[1]);

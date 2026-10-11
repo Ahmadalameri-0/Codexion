@@ -6,7 +6,7 @@
 /*   By: abani-am <abani-am@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/20 11:24:06 by abani-am          #+#    #+#             */
-/*   Updated: 2026/10/04 12:31:05 by abani-am         ###   ########.fr       */
+/*   Updated: 2026/10/10 12:07:41 by abani-am         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -39,8 +39,6 @@ typedef struct s_heap
 typedef struct s_dongle
 {
 	int					id;
-	pthread_mutex_t		lock;
-	pthread_cond_t		cond;
 	long long			last_used_time;
 	int					taken;
 	t_heap				queue;
@@ -52,6 +50,7 @@ typedef struct s_coder
 	int				id;
 	long long		last_compile_time;
 	int				compiles_count;
+	long long		start_at;
 	t_dongle		*left_dongle;
 	t_dongle		*right_dongle;
 	struct s_data	*data;
@@ -72,6 +71,8 @@ typedef struct s_data
 	int					simulation_stop;
 	pthread_mutex_t		write_mutex;
 	pthread_mutex_t		state_mutex;
+	pthread_mutex_t		table_lock;
+	pthread_cond_t		table_cond;
 	t_coder				*coders;
 	t_dongle			*dongle;
 }						t_data;
@@ -79,9 +80,14 @@ typedef struct s_data
 long long	get_current_time(void);
 long long	get_time_elapsed(long long start_time);
 void		ft_usleep(long long time_in_ms, t_data *data);
+int			is_stopped(t_coder *coder);
+void		timed_wait(t_data *data, long long ms);
 int			parse_args(int argc, char **argv, t_data *data);
 int			init_simulation(t_data *data);
 void		*coder_routine(void *arg);
+void		print_action(t_coder *coder, char *action);
+int			take_dongles(t_coder *coder, t_request req);
+void		release_dongles(t_coder *coder);
 void		monitor_routine(t_data *data);
 void		stop_simulation(t_data *data);
 t_request	scheduler_pop(t_heap *heap);
