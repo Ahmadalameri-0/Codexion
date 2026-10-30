@@ -10,7 +10,7 @@
 [![C](https://img.shields.io/badge/Language-C-00599C?style=for-the-badge&logo=c)](https://en.wikipedia.org/wiki/C_(programming_language))
 [![Threads](https://img.shields.io/badge/POSIX-Threads-4B32C3?style=for-the-badge&logo=linux)](https://en.wikipedia.org/wiki/Pthreads)
 [![Architecture](https://img.shields.io/badge/Architecture-Concurrency-FF6F00?style=for-the-badge)](https://en.wikipedia.org/wiki/Concurrency_(computer_science))
-![42](https://img.shields.io/badge/Curriculum-42_Network-000000?style=for-the-badge&logo=42)
+[![42](https://img.shields.io/badge/Curriculum-42_Network-000000?style=for-the-badge&logo=42)](https://42.fr/)
 
 *A sophisticated simulation exploring the complexities of thread synchronization, deadlock prevention, and scheduling algorithms.*
 
